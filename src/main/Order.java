@@ -1,16 +1,21 @@
 package main;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 
+import DAO.databaseHandler;
+
 public class Order {
+	databaseHandler db_handler = new databaseHandler();
 	private String type;
 	private int bill;
 	private ItemPreparation prepareItem;
 	public String deliveryAddress;
 	public Date pickupTime = new Date();
 	private ArrayList<Integer> itemQuantity = new ArrayList<>();
-	private ArrayList<Item> orderItems = new ArrayList<>();
+	private ArrayList<Integer> orderItems = new ArrayList<>();
 	
 	public Order() {
 		prepareItem = new ItemPreparation();
@@ -30,7 +35,16 @@ public class Order {
 	}
 	
 	//adding item to order
-	public void addItem(Item item, int quantity) {
+	public void addItem(int item, int quantity) {
+		try {
+			db_handler.stmt = db_handler.conn.createStatement();
+			int tuples = db_handler.stmt.executeUpdate("insert into order_items_tbl (item_id, quantity) values ("+item+","+quantity+")");
+			db_handler.stmt.close();
+			
+		}catch(SQLException se){
+		   se.printStackTrace();
+		}
+		
 		orderItems.add(item);
 		itemQuantity.add(quantity);
 	}
@@ -46,6 +60,7 @@ public class Order {
 	//placing order
 	public void placeOrder() {
 		calcBill();
+		
 		if (prepareItem.getAvailableCooks()!=0) {
 			System.out.println("Your order is placed");
 		}
@@ -54,7 +69,18 @@ public class Order {
 	//calculating bill of order
 	public int calcBill() {
 		for (int i=0; i<orderItems.size(); i++) {
-			bill += orderItems.get(i).price * itemQuantity.get(i);
+			try {
+				db_handler.prep_stmt = db_handler.conn.prepareStatement("select price from items_tbl where item_id = ?");
+				db_handler.prep_stmt.setInt(1,orderItems.get(i));
+				ResultSet items = db_handler.prep_stmt.executeQuery();
+				if(items.next()) {
+					bill += items.getInt("price")*itemQuantity.get(i);
+				}
+				items.close();
+				db_handler.prep_stmt.close();
+			}catch(SQLException se){
+				se.printStackTrace();
+			}
 		}
 		return bill;
 	}

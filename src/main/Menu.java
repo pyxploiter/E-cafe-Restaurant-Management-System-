@@ -1,40 +1,68 @@
 package main;
+import java.sql.*;
+import java.util.Scanner;
+
+import DAO.databaseHandler;
 
 public class Menu {
-	Item item[] = new Item[15];
+	databaseHandler db_handler = new databaseHandler();
+	Scanner sc=new Scanner(System.in);
 	
 	public Menu() {
-		generateMenu();
+		
 	}
 	
-	public void generateMenu() {
-		item[0] = new Item("Garlic Bread","appetizer",250);
-		item[1] = new Item("Garlic Knots","appetizer",100);
-		item[2] = new Item("Fried Calamari","appetizer",980);
-		item[3] = new Item("French Fries","appetizer",300);
-		
-		item[4] = new Item("Beef Soup","soup",250);
-		item[5] = new Item("Wonton Soup","soup",250);
-		
-		item[6] = new Item("Chicken Thai Curry","maindish",700);
-		item[7] = new Item("Fish Thai Curry","maindish",850);
-		item[8] = new Item("Rendang Rice Set","maindish",670);
-		item[9] = new Item("Lamb Chops","maindish",450);
-		item[10] = new Item("Filet Steak","maindish",750);
-		item[11] = new Item("Roasted Mutton","maindish",900);
-		
-		item[12] = new Item("Roasted Potatoes","sidedish",150);
-		item[13] = new Item("Bacon","sidedish",200);
-		item[14] = new Item("Sausage","sidedish",100);
+	public void addItem() {
+		System.out.print("Item name: ");
+		String item_name = sc.nextLine();
+		System.out.print("Item category: ");
+		String item_category = sc.nextLine();
+		System.out.print("Item price: ");
+		int item_price = sc.nextInt();
+		try {
+			db_handler.prep_stmt = db_handler.conn.prepareStatement("insert into items_tbl (name, category, price) values (?,?,?)");
+			db_handler.prep_stmt.setString(1, item_name);
+			db_handler.prep_stmt.setString(2, item_category.toString());
+			db_handler.prep_stmt.setInt(3, item_price);
+			
+			int affected_tuples = db_handler.prep_stmt.executeUpdate();
+			
+			db_handler.prep_stmt.close();
+		}catch(SQLException se){
+		   se.printStackTrace();
+		}
+	}
+	
+	public void removeItem() {
+		System.out.print("Item name: ");
+		String item_name = sc.nextLine();
+		try {
+			db_handler.call_stmt = db_handler.conn.prepareCall("{call deleteItem(\""+item_name+"\")}");
+			//db_handler.prep_stmt = db_handler.conn.prepareStatement("delete from items_tbl where name = ?");
+			//db_handler.prep_stmt.setString(1,item_name);
+			int affected_tuples = db_handler.call_stmt.executeUpdate();
+			
+			db_handler.call_stmt.close();
+		}catch(SQLException se){
+		   se.printStackTrace();
+		}
 	}
 	
 	public void showMenu() {
 		System.out.println("============================== MENU ==============================");
-		System.out.println("Item No         Item Name              Category              Price");
+		System.out.println("Item ID         Item Name              Category              Price");
 		System.out.println("------------------------------------------------------------------");
-		for (int i=0; i<15; i++) {
-				System.out.printf("   %-12d%-24s%-22s%-10d",(i+1),item[i].name,item[i].category,item[i].price);
+		try {
+			db_handler.prep_stmt = db_handler.conn.prepareStatement("select * from items_tbl");
+			ResultSet items = db_handler.prep_stmt.executeQuery();
+			while(items.next()) {
+				System.out.printf("   %-12d%-24s%-22s%-10d",items.getInt("item_id"),items.getString("name"),items.getString("category"), items.getInt("price"));
 				System.out.println();
+			}
+			items.close();
+			db_handler.prep_stmt.close();
+		}catch(SQLException se){
+		   se.printStackTrace();
 		}
 		System.out.println("------------------------------------------------------------------");
 	}
